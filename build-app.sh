@@ -25,15 +25,43 @@ load_env_file "$ROOT_DIR/.env"
 APP_NAME="${APP_NAME:-怂团}"
 APP_ID="${APP_ID:-com.h5app.app}"
 WEB_DIR="${WEB_DIR:-dist}"
-PROXY_BASE_URL="${PROXY_BASE_URL:-}"
+LOCAL_PROXY_PORT="${LOCAL_PROXY_PORT:-0}"
 
 export APP_NAME
 export APP_ID
 export WEB_DIR
-export PROXY_BASE_URL
+export LOCAL_PROXY_PORT
 
-echo "🧩 构建配置: APP_NAME=$APP_NAME | APP_ID=$APP_ID | WEB_DIR=$WEB_DIR"
+echo "🧩 构建配置: APP_NAME=$APP_NAME | APP_ID=$APP_ID | WEB_DIR=$WEB_DIR | LOCAL_PROXY_PORT=$LOCAL_PROXY_PORT"
 echo ""
+
+ensure_android_write_permissions() {
+  local targets=(
+    "$ANDROID_DIR/app/src/main/assets/public"
+    "$ANDROID_DIR/capacitor-cordova-android-plugins"
+    "$ANDROID_DIR/app/build"
+  )
+
+  local blocked=0
+  for path in "${targets[@]}"; do
+    [ -e "$path" ] || continue
+    if [ ! -w "$path" ]; then
+      echo "❌ 无写权限: $path"
+      blocked=1
+    fi
+  done
+
+  if [ "$blocked" -ne 0 ]; then
+    echo ""
+    echo "检测到 Android 目录权限异常（通常是历史 sudo 构建导致）。"
+    echo "请先执行以下命令修复后再重试："
+    echo "  sudo chown -R \"$(whoami)\":staff \"$ANDROID_DIR/app/src/main/assets/public\" \"$ANDROID_DIR/capacitor-cordova-android-plugins\" \"$ANDROID_DIR/app/build\""
+    echo ""
+    exit 1
+  fi
+}
+
+ensure_android_write_permissions
 
 # 将 APP_NAME/APP_ID 写入 Android 原生资源（桌面显示名来自这里）
 # 构建前备份，构建后自动还原，避免污染工作区
@@ -152,111 +180,6 @@ if [ ! -f "$INDEX_HTML_PATH" ]; then
     echo "❌ 错误：未找到 $INDEX_HTML_PATH"
     echo "请先确保 ${WEB_DIR_CLEAN} 目录已生成"
     exit 1
-fi
-
-# 0. 注入 WebView 代理脚本（可选）
-if [ -n "${PROXY_BASE_URL:-}" ]; then
-    echo "🌐 配置 WebView 代理... (PROXY_BASE_URL=$PROXY_BASE_URL)"
-    python3 - "$INDEX_HTML_PATH" "$PROXY_BASE_URL" <<'PY'
-import sys
-from pathlib import Path
-
-html_path = Path(sys.argv[1])
-proxy_base = sys.argv[2].rstrip("/")
-
-start_marker = "<!-- AUTO_PROXY_SCRIPT_START -->"
-end_marker = "<!-- AUTO_PROXY_SCRIPT_END -->"
-
-script_block = f"""{start_marker}
-    <script>
-      (function () {{
-        var API_PROXY_BASE =
-          window.__API_PROXY_BASE ||
-          localStorage.getItem("API_PROXY_BASE") ||
-          "{proxy_base}";
-
-        function normalizeBase(base) {{
-          return String(base || "").replace(/\\/+$/, "");
-        }}
-
-        var base = normalizeBase(API_PROXY_BASE);
-        if (!base) return;
-
-        var PROXY_PATH_PREFIXES = ["/api/weixin-long", "/api/weixin", "/api/hortor"];
-
-        function mapPath(pathname) {{
-          for (var i = 0; i < PROXY_PATH_PREFIXES.length; i++) {{
-            if (pathname.indexOf(PROXY_PATH_PREFIXES[i]) === 0) {{
-              return pathname;
-            }}
-          }}
-          return null;
-        }}
-
-        function rewriteUrl(input) {{
-          try {{
-            var raw = typeof input === "string" ? input : input && input.url;
-            if (!raw) return input;
-
-            var url = new URL(raw, window.location.href);
-            var path = mapPath(url.pathname);
-            if (!path) return input;
-
-            return base + path + (url.search || "");
-          }} catch (e) {{
-            return input;
-          }}
-        }}
-
-        var rawFetch = window.fetch;
-        if (typeof rawFetch === "function") {{
-          window.fetch = function (input, init) {{
-            var rewritten = rewriteUrl(input);
-            if (typeof input === "string") {{
-              return rawFetch.call(this, rewritten, init);
-            }}
-            if (input instanceof Request && typeof rewritten === "string" && rewritten !== input.url) {{
-              return rawFetch.call(this, new Request(rewritten, input), init);
-            }}
-            return rawFetch.call(this, input, init);
-          }};
-        }}
-
-        var rawOpen = XMLHttpRequest.prototype.open;
-        XMLHttpRequest.prototype.open = function (method, url) {{
-          var rewritten = rewriteUrl(url);
-          return rawOpen.apply(this, [method, rewritten].concat([].slice.call(arguments, 2)));
-        }};
-      }})();
-    </script>
-{end_marker}"""
-
-content = html_path.read_text(encoding="utf-8")
-
-if start_marker in content and end_marker in content:
-    start = content.index(start_marker)
-    end = content.index(end_marker) + len(end_marker)
-    new_content = content[:start] + script_block + content[end:]
-else:
-    anchor = '<script type="module" crossorigin src="/assets/'
-    idx = content.find(anchor)
-    if idx == -1:
-        raise SystemExit("未找到注入位置：module script 标签")
-    new_content = content[:idx] + script_block + "\n    " + content[idx:]
-
-html_path.write_text(new_content, encoding="utf-8")
-PY
-
-    if [ $? -ne 0 ]; then
-        echo "❌ 错误：代理脚本注入失败"
-        exit 1
-    fi
-
-    echo "✅ 代理配置完成"
-    echo ""
-else
-    echo "⏭️  未设置 PROXY_BASE_URL，跳过代理脚本注入"
-    echo ""
 fi
 
 # 1. 同步文件
