@@ -1,9 +1,9 @@
 ---
 name: git-pr-workflow
-description: Standardize git commit/push and GitHub PR workflow with review gates. Use when the user asks to commit code, push, open/create a PR, or wants PR review/audit/checklist. Uses Conventional Commits and gh CLI, prompts for reviewers, targets base branch main by default.
+description: Standardize git commit/push and GitHub PR workflow with review gates. Use when the user asks to commit code, push, open/create a PR, or wants PR review/audit/checklist. Uses Conventional Commits, targets base branch main by default. No gh CLI required.
 ---
 
-# Git 提交 + PR 审核工作流（GitHub/gh）
+# Git 提交 + PR 审核工作流（GitHub，无需 gh）
 
 ## 适用场景（触发词）
 
@@ -59,14 +59,16 @@ description: Standardize git commit/push and GitHub PR workflow with review gate
   - 首次推送分支：`git push -u origin HEAD`
   - 已有上游：`git push`
 
-### 6) 创建 PR（GitHub + gh）
+### 6) 创建 PR（GitHub 网页端）
 
 - 创建前确认：
   - base 分支默认 `main`
   - PR 标题：尽量与 commit 标题对齐（更可读）
-- 收集 reviewers（交互询问，可为空）
-- 使用 `gh pr create` 创建 PR：
-  - 标题：一句话
+- 收集 reviewers（交互询问，可为空；网页端可后续添加）
+- 创建 PR 的推荐方式（无需 `gh`）：
+  - 推送分支后，打开远端仓库网页，一般会出现 “Compare & pull request”
+  - 或手动进入仓库的 Pull requests 页面，选择 base=`main`，compare=`你的分支`
+  - 标题：一句话（尽量与 commit 标题对齐）
   - Body：必须包含 Summary + Test plan + Risk/Notes
 
 建议 PR Body 模板：
@@ -108,6 +110,5 @@ description: Standardize git commit/push and GitHub PR workflow with review gate
 - 变更检查：`git status` / `git diff` / `git diff --staged`
 - 提交：`git commit -m "..."`
 - 推送：`git push -u origin HEAD`
-- 创建 PR：`gh pr create --base main --title "..." --body "..."`
-- 查看 PR：`gh pr view --web`
+- 打开远端仓库：`git remote -v`（复制对应的 `origin` URL 到浏览器）
 
