@@ -1,0 +1,41 @@
+---
+description: Git commit 提交信息规范（Conventional Commits）
+globs: "{.gitignore,**/.gitignore,.github/**}"
+alwaysApply: false
+---
+
+# Git commit 提交信息规范
+
+## 格式
+
+- 必须使用：`<type>(<scope>): <subject>`
+- `scope` 可选，但推荐在改动明确归属模块时填写
+
+## type 列表（统一使用以下值）
+
+- `feat`：新增功能
+- `fix`：修复缺陷
+- `docs`：文档变更
+- `style`：仅格式调整（不影响逻辑）
+- `refactor`：重构（不新增功能、不修复缺陷）
+- `perf`：性能优化
+- `test`：测试相关
+- `build`：构建系统/依赖相关（如 npm/gradle/vite）
+- `ci`：CI 配置变更
+- `chore`：杂项维护（不属于以上类型）
+- `revert`：回滚提交
+
+## subject（标题）要求
+
+- 一句话说明改动目的，尽量 ≤ 50 个中文字符（或 ≤ 72 英文字符）
+- 使用动词开头，避免含糊：不要只写 `update`、`fix bug`
+
+## Breaking change（破坏性变更）
+
+- 需要显式标记：在 type 后加 `!`，或在正文中写 `BREAKING CHANGE: ...`
+
+## 示例
+
+- `chore(gitignore): 优化忽略规则并补全常见缓存`
+- `fix(android): 修复本地构建找不到 assets 目录`
+- `build(deps): 升级依赖并更新 lockfile`
