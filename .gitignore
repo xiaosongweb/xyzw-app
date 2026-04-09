@@ -1,0 +1,34 @@
+node_modules/
+.DS_Store
+*.log
+*.local
+.idea/
+.vscode/
+# android/
+ios/
+.capacitor/
+dist/
+android/app/src/main/assets/public/*
+
+# ---- Android / Gradle (Capacitor) ----
+android/.gradle/
+android/**/build/
+android/**/.cxx/
+android/**/.externalNativeBuild/
+android/**/captures/
+android/**/local.properties
+
+# Keystores / signing (never commit secrets)
+*.jks
+*.keystore
+**/keystore.properties
+
+# Build artifacts
+*.apk
+*.aab
+
+# ---- macOS ----
+.AppleDouble
+.LSOverride
+**/Icon?
+._*

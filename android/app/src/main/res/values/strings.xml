@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">怂团</string>
+    <string name="title_activity_main">怂团</string>
+    <string name="package_name">com.h5app.app</string>
+    <string name="custom_url_scheme">com.h5app.app</string>
+</resources>

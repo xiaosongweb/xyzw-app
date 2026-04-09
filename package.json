@@ -1,0 +1,31 @@
+{
+  "name": "h5-app",
+  "version": "1.0.0",
+  "description": "手机 H5 应用 - 展示静态包内容",
+  "main": "index.js",
+  "scripts": {
+    "sync": "npx cap sync",
+    "open:android": "npx cap open android",
+    "open:ios": "npx cap open ios",
+    "copy": "npx cap copy"
+  },
+  "keywords": [
+    "capacitor",
+    "h5",
+    "mobile"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/app": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/splash-screen": "^6.0.0",
+    "@capacitor/status-bar": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "typescript": "^5.9.3"
+  }
+}
