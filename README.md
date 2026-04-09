@@ -2,9 +2,9 @@
 
 这是一个基于 **Capacitor v6** 的移动端应用壳工程，用于将项目根目录下的 `dist/` **静态资源包**打包成 **Android / iOS App** 并在 WebView 中展示。
 
-- **应用名称**：怂团（见 `capacitor.config.ts`）
-- **App ID**：`com.h5app.app`
-- **Web 资源目录**：`dist/`
+- **应用名称**：怂团（默认，可用构建环境变量覆盖，见下文与 `capacitor.config.ts`）
+- **App ID**：`com.h5app.app`（默认，可用构建环境变量覆盖）
+- **Web 资源目录**：`dist/`（默认，可用构建环境变量覆盖）
 
 ## 功能概述
 
@@ -37,6 +37,33 @@
   - macOS + Xcode
 
 ## 快速开始
+
+### （可选）构建期动态配置（默认值不变）
+
+本项目支持通过 `.env`（或环境变量）在**构建期**覆盖 Capacitor 配置（不传则使用默认值）：
+
+- `APP_NAME`：覆盖应用名称（默认 `怂团`）
+- `APP_ID`：覆盖 App ID/包名（默认 `com.h5app.app`）
+- `WEB_DIR`：覆盖 Web 资源目录（默认 `dist`）
+ - `PROXY_BASE_URL`：WebView 代理域名（可选；未设置则跳过注入）
+
+示例：
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env` 后执行：
+
+```bash
+npx cap sync
+```
+
+也可以用命令行环境变量临时覆盖：
+
+```bash
+APP_NAME="怂团-测试" APP_ID="com.h5app.app.dev" WEB_DIR="dist" PROXY_BASE_URL="http://localhost:3000" npx cap sync
+```
 
 ### 1) 安装依赖
 
@@ -103,12 +130,12 @@ APK 输出位置：
 
 ## WebView 代理配置（可选）
 
-`build-app.sh` 支持通过环境变量 `PROXY_BASE_URL` 注入一段请求重写脚本到 `dist/index.html`，用于将特定接口路径转发到指定域名（脚本内含 `"/api/weixin-long"`, `"/api/weixin"`, `"/api/hortor"` 等前缀）。
+`build-app.sh` 支持通过环境变量 `PROXY_BASE_URL`（可选）注入一段请求重写脚本到 `dist/index.html`，用于将特定接口路径转发到指定域名（脚本内含 `"/api/weixin-long"`, `"/api/weixin"`, `"/api/hortor"` 等前缀）。未设置时会跳过注入。
 
 示例：
 
 ```bash
-PROXY_BASE_URL="http://xiaosongweb.cn" ./build-app.sh
+PROXY_BASE_URL="http://localhost:3000" ./build-app.sh
 ```
 
 ## 常见问题

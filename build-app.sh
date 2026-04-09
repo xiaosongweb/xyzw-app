@@ -4,6 +4,84 @@
 
 echo "🚀 开始构建 Android 应用..."
 
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ANDROID_DIR="$ROOT_DIR/android"
+
+load_env_file() {
+  local env_file="$1"
+  if [ -f "$env_file" ]; then
+    echo "📄 加载环境配置: $env_file"
+    set -a
+    # shellcheck disable=SC1090
+    source "$env_file"
+    set +a
+  fi
+}
+
+# ---- 构建期 env 配置（默认值不变）----
+# 优先级：命令行环境变量 > .env > 默认值
+load_env_file "$ROOT_DIR/.env"
+
+APP_NAME="${APP_NAME:-怂团}"
+APP_ID="${APP_ID:-com.h5app.app}"
+WEB_DIR="${WEB_DIR:-dist}"
+PROXY_BASE_URL="${PROXY_BASE_URL:-}"
+
+export APP_NAME
+export APP_ID
+export WEB_DIR
+export PROXY_BASE_URL
+
+echo "🧩 构建配置: APP_NAME=$APP_NAME | APP_ID=$APP_ID | WEB_DIR=$WEB_DIR"
+echo ""
+
+# 将 APP_NAME/APP_ID 写入 Android 原生资源（桌面显示名来自这里）
+# 构建前备份，构建后自动还原，避免污染工作区
+ANDROID_STRINGS_XML="$ANDROID_DIR/app/src/main/res/values/strings.xml"
+if [ -f "$ANDROID_STRINGS_XML" ]; then
+    STRINGS_XML_BACKUP="$(mktemp -t strings.xml.XXXXXX)"
+    cp "$ANDROID_STRINGS_XML" "$STRINGS_XML_BACKUP"
+
+    restore_strings_xml() {
+      if [ -n "$STRINGS_XML_BACKUP" ] && [ -f "$STRINGS_XML_BACKUP" ]; then
+        cp "$STRINGS_XML_BACKUP" "$ANDROID_STRINGS_XML"
+        rm -f "$STRINGS_XML_BACKUP"
+      fi
+    }
+
+    # 无论构建成功/失败，都还原原文件
+    trap restore_strings_xml EXIT INT TERM
+
+    echo "📝 临时更新 Android strings.xml（构建结束自动还原）..."
+    python3 - "$ANDROID_STRINGS_XML" "$APP_NAME" "$APP_ID" <<'PY'
+import sys
+from pathlib import Path
+import xml.etree.ElementTree as ET
+
+path = Path(sys.argv[1])
+new_name = sys.argv[2]
+app_id = sys.argv[3]
+
+tree = ET.parse(path)
+root = tree.getroot()
+
+def upsert(name: str, value: str):
+    el = root.find(f".//string[@name='{name}']")
+    if el is None:
+        el = ET.SubElement(root, "string", {"name": name})
+    el.text = value
+
+upsert("app_name", new_name)
+upsert("title_activity_main", new_name)
+upsert("package_name", app_id)
+upsert("custom_url_scheme", app_id)
+
+tree.write(path, encoding="utf-8", xml_declaration=True)
+PY
+else
+    echo "⚠️ 未找到 $ANDROID_STRINGS_XML，跳过应用名称更新"
+fi
+
 # 检查 Java
 echo "☕ 检查 Java 环境..."
 if ! command -v java &> /dev/null; then
@@ -60,25 +138,26 @@ fi
 echo "✅ Android SDK 位置: $ANDROID_HOME"
 
 # 创建 local.properties 文件（如果不存在）
-if [ ! -f "android/local.properties" ]; then
+if [ ! -f "$ANDROID_DIR/local.properties" ]; then
     echo "📝 创建 local.properties 文件..."
-    echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+    echo "sdk.dir=$ANDROID_HOME" > "$ANDROID_DIR/local.properties"
 fi
 
 echo ""
 
-# 0. 注入 WebView 代理脚本到 dist/index.html
-echo "🌐 配置 WebView 代理..."
-PROXY_BASE_URL="${PROXY_BASE_URL:-http://xiaosongweb.cn}"
-INDEX_HTML_PATH="dist/index.html"
+WEB_DIR_CLEAN="${WEB_DIR%/}"
+INDEX_HTML_PATH="$ROOT_DIR/${WEB_DIR_CLEAN}/index.html"
 
 if [ ! -f "$INDEX_HTML_PATH" ]; then
     echo "❌ 错误：未找到 $INDEX_HTML_PATH"
-    echo "请先确保 dist 目录已生成"
+    echo "请先确保 ${WEB_DIR_CLEAN} 目录已生成"
     exit 1
 fi
 
-python3 - "$INDEX_HTML_PATH" "$PROXY_BASE_URL" <<'PY'
+# 0. 注入 WebView 代理脚本（可选）
+if [ -n "${PROXY_BASE_URL:-}" ]; then
+    echo "🌐 配置 WebView 代理... (PROXY_BASE_URL=$PROXY_BASE_URL)"
+    python3 - "$INDEX_HTML_PATH" "$PROXY_BASE_URL" <<'PY'
 import sys
 from pathlib import Path
 
@@ -168,21 +247,25 @@ else:
 html_path.write_text(new_content, encoding="utf-8")
 PY
 
-if [ $? -ne 0 ]; then
-    echo "❌ 错误：代理脚本注入失败"
-    exit 1
+    if [ $? -ne 0 ]; then
+        echo "❌ 错误：代理脚本注入失败"
+        exit 1
+    fi
+
+    echo "✅ 代理配置完成"
+    echo ""
+else
+    echo "⏭️  未设置 PROXY_BASE_URL，跳过代理脚本注入"
+    echo ""
 fi
 
-echo "✅ 代理配置完成（PROXY_BASE_URL=$PROXY_BASE_URL）"
-echo ""
-
 # 1. 同步文件
-echo "📦 同步 dist 文件到 Android 项目..."
+echo "📦 同步 ${WEB_DIR_CLEAN} 文件到 Android 项目..."
 npx cap sync
 
 # 2. 构建 APK
 echo "🔨 构建 Android APK..."
-cd android
+cd "$ANDROID_DIR"
 
 # 构建 Debug APK
 echo "构建 Debug 版本..."

@@ -26,6 +26,7 @@
   "devDependencies": {
     "@capacitor/android": "^6.0.0",
     "@capacitor/ios": "^6.0.0",
+    "dotenv": "^17.4.1",
     "typescript": "^5.9.3"
   }
 }

@@ -93,11 +93,11 @@ adb logcat > adb-live.log
 
 ## 7. 本项目已做的网络兼容配置
 
-为兼容固定 HTTP 代理域名 `http://xiaosongweb.cn`，已做：
+为兼容 **HTTP 代理域名**（由本地 `PROXY_BASE_URL` 配置决定），已做：
 
 - `MainActivity` 允许混合内容
 - `AndroidManifest.xml` 启用明文流量
-- `network_security_config.xml` 放行 `xiaosongweb.cn`
+- `network_security_config.xml` 放行代理域名（按需配置）
 
 如仍失败，优先检查：
 
